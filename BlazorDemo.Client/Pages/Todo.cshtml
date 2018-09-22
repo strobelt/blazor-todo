@@ -1,0 +1,64 @@
+﻿@page "/todo"
+@using BlazorDemo.Shared
+@using BlazorDemo.JSInterop
+@using Blazor.Extensions.Storage
+@inject LocalStorage LocalStorage
+
+<h1>Todo (@todos.Where(todo => !todo.IsDone).Count())</h1>
+
+<ul class="col-md-6">
+    @for(var i = 0; i < todos.Count; i++)
+    {
+        var todo = todos[i];
+        <li>
+            <div>
+                <a class="btn btn-sm btn-sucess" onclick="@(() => MarkAsDone(todo))">
+                    <span class="@(todo.IsDone ? "done" : "")">@todo.Title</span>
+                    <span class="@(todo.IsDone ? "visible" : "hidden")">✔️</span>
+                </a>
+            </div>
+        </li>
+    }
+</ul>
+
+<form>
+    <div class="form-group">
+        <label class="form-check-label" for="todoText">Check me out</label>
+        <input class="form-control" id="todoText" placeholder="Something todo" bind="@newTodo" />
+    </div>
+    <button type="button" class="btn btn-primary" onclick="@AddTodo">Add todo</button>
+    <button type="button" class="btn btn-danger" onclick="@ClearAll">Clear All</button>
+</form>
+
+@functions {
+        IList<TodoItem> todos = new List<TodoItem>();
+        string newTodo;
+
+    protected override async Task OnInitAsync()
+    {
+        todos = await LocalStorage.GetItem<IList<TodoItem>>("todos");
+        if (todos == null) todos = new List<TodoItem>();
+    }
+
+    void AddTodo()
+    {
+        todos.Add(new TodoItem { Title = newTodo });
+        newTodo = string.Empty;
+        LocalStorage.SetItem("todos", todos);
+    }
+
+    void MarkAsDone(TodoItem todo)
+    {
+        todo.IsDone = !todo.IsDone;
+        LocalStorage.SetItem("todos", todos);
+    }
+
+    async Task ClearAll()
+    {
+        if (await JsInterop.Confirm("Are you sure you want to clear all items?"))
+        {
+            await LocalStorage.Clear();
+            todos = new List<TodoItem>();
+        }
+    }
+}
